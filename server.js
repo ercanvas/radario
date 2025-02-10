@@ -1,10 +1,19 @@
 const express = require('express');
 const WebSocket = require('ws');
 const http = require('http');
+const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
+
+// Statik dosyaları sun (public klasöründeki dosyalar)
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Ana sayfayı sun
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 let players = {}; // Bağlı oyuncuların bilgileri
 let pendingPlayers = {}; // Form gönderilene kadar bekleyen oyuncular
@@ -53,5 +62,5 @@ wss.on('connection', (ws) => {
 });
 
 server.listen(3000, () => {
-    console.log('Server is listening on ws://localhost:3000');
+    console.log('Server is listening on http://localhost:3000');
 });
