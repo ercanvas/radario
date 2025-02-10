@@ -25,25 +25,34 @@ wss.on('connection', (ws) => {
     // Oyuncu formu gönderilene kadar beklet
     pendingPlayers[playerId] = ws;
 
-    // Oyuncudan gelen hareket bilgilerini dinliyoruz
+    // Oyuncudan gelen mesajları dinliyoruz
     ws.on('message', (message) => {
-        const playerData = JSON.parse(message);
+        const data = JSON.parse(message);
 
-        // Eğer oyuncu formu gönderdiyse, oyuncuyu resmen ekle
-        if (!players[playerId]) {
-            players[playerId] = playerData; // Oyuncuyu resmen ekle
-            delete pendingPlayers[playerId]; // Bekleyenler listesinden çıkar
-            console.log(`Player ${playerId} added to the game.`);
-        } else {
-            players[playerId] = playerData; // Oyuncunun konumunu güncelle
-        }
-
-        // Tüm oyunculara yeni konum bilgilerini gönder
-        wss.clients.forEach(client => {
-            if (client.readyState === WebSocket.OPEN) {
-                client.send(JSON.stringify(players));
+        if (data.type === 'player') {
+            // Oyuncu bilgilerini güncelle
+            if (!players[playerId]) {
+                players[playerId] = data.data; // Oyuncuyu resmen ekle
+                delete pendingPlayers[playerId]; // Bekleyenler listesinden çıkar
+                console.log(`Player ${playerId} added to the game.`);
+            } else {
+                players[playerId] = data.data; // Oyuncunun konumunu güncelle
             }
-        });
+
+            // Tüm oyunculara yeni konum bilgilerini gönder
+            wss.clients.forEach(client => {
+                if (client.readyState === WebSocket.OPEN) {
+                    client.send(JSON.stringify({ type: 'player', data: players }));
+                }
+            });
+        } else if (data.type === 'chat') {
+            // Chat mesajını tüm istemcilere gönder
+            wss.clients.forEach(client => {
+                if (client.readyState === WebSocket.OPEN) {
+                    client.send(JSON.stringify({ type: 'chat', data: data.data }));
+                }
+            });
+        }
     });
 
     // Bağlantı kapandığında oyuncuyu listeden çıkarıyoruz
@@ -55,7 +64,7 @@ wss.on('connection', (ws) => {
         // Tüm oyunculara güncellenmiş listeyi gönder
         wss.clients.forEach(client => {
             if (client.readyState === WebSocket.OPEN) {
-                client.send(JSON.stringify(players));
+                client.send(JSON.stringify({ type: 'player', data: players }));
             }
         });
     });

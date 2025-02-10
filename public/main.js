@@ -28,7 +28,7 @@ colorForm.addEventListener('submit', (event) => {
     event.preventDefault();
     player.color = document.getElementById('colorPicker').value;
     colorForm.style.display = 'none'; // Renk seçimi formunu gizle
-    socket.send(JSON.stringify(player)); // Oyuncunun rengi ve konumu sunucuya gönder
+    socket.send(JSON.stringify({ type: 'player', data: player })); // Oyuncunun rengi ve konumu sunucuya gönder
 });
 
 const centerX = radar.width / 2;
@@ -37,6 +37,59 @@ let angle = 0;
 const radarRadius = 200;
 let pulses = [];
 let players = {}; // Sunucudan gelen diğer oyuncuların bilgileri
+
+// Dokunmatik kontroller için butonlar
+const controls = document.createElement('div');
+controls.style.position = 'fixed';
+controls.style.bottom = '20px';
+controls.style.left = '20px';
+controls.style.display = 'flex';
+controls.style.flexDirection = 'column';
+controls.style.gap = '10px';
+
+const upButton = document.createElement('button');
+upButton.innerText = 'Yukarı';
+upButton.style.padding = '10px';
+upButton.style.fontSize = '16px';
+
+const downButton = document.createElement('button');
+downButton.innerText = 'Aşağı';
+downButton.style.padding = '10px';
+downButton.style.fontSize = '16px';
+
+const leftButton = document.createElement('button');
+leftButton.innerText = 'Sol';
+leftButton.style.padding = '10px';
+leftButton.style.fontSize = '16px';
+
+const rightButton = document.createElement('button');
+rightButton.innerText = 'Sağ';
+rightButton.style.padding = '10px';
+rightButton.style.fontSize = '16px';
+
+const speedButton = document.createElement('button');
+speedButton.innerText = 'Hız Artır';
+speedButton.style.padding = '10px';
+speedButton.style.fontSize = '16px';
+
+controls.appendChild(upButton);
+controls.appendChild(downButton);
+controls.appendChild(leftButton);
+controls.appendChild(rightButton);
+controls.appendChild(speedButton);
+document.body.appendChild(controls);
+
+let speed = 5; // Başlangıç hızı
+
+// Dokunmatik butonlar için olay dinleyicileri
+upButton.addEventListener('click', () => movePlayer(0, -speed));
+downButton.addEventListener('click', () => movePlayer(0, speed));
+leftButton.addEventListener('click', () => movePlayer(-speed, 0));
+rightButton.addEventListener('click', () => movePlayer(speed, 0));
+speedButton.addEventListener('click', () => {
+    speed = speed === 5 ? 10 : 5; // Hızı değiştir
+    speedButton.innerText = speed === 5 ? 'Hız Artır' : 'Hız Azalt';
+});
 
 // Oyuncu hareketi
 const movePlayer = (dx, dy) => {
@@ -52,34 +105,104 @@ const movePlayer = (dx, dy) => {
         player.y = newY;
     }
 
-    socket.send(JSON.stringify(player)); // Oyuncu konumu güncelleniyor ve sunucuya gönderiliyor
+    socket.send(JSON.stringify({ type: 'player', data: player })); // Oyuncu konumu güncelleniyor ve sunucuya gönderiliyor
 };
 
+// Klavye olayları
 document.addEventListener('keydown', (event) => {
-    const speed = event.shiftKey ? 10 : 5; // Shift tuşu basılıysa hız 10, değilse 5
+    const currentSpeed = event.shiftKey ? 10 : 5; // Shift tuşu basılıysa hız 10, değilse 5
 
     switch (event.key) {
         case 'ArrowUp':
         case 'w':
-            movePlayer(0, -speed);
+            movePlayer(0, -currentSpeed);
             break;
         case 'ArrowDown':
         case 's':
-            movePlayer(0, speed);
+            movePlayer(0, currentSpeed);
             break;
         case 'ArrowLeft':
         case 'a':
-            movePlayer(-speed, 0);
+            movePlayer(-currentSpeed, 0);
             break;
         case 'ArrowRight':
         case 'd':
-            movePlayer(speed, 0);
+            movePlayer(currentSpeed, 0);
             break;
     }
 });
 
+// Chat özelliği
+const chatContainer = document.createElement('div');
+chatContainer.style.position = 'fixed';
+chatContainer.style.bottom = '20px';
+chatContainer.style.right = '20px';
+chatContainer.style.width = '300px';
+chatContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+chatContainer.style.padding = '10px';
+chatContainer.style.borderRadius = '10px';
+chatContainer.style.color = 'white';
+chatContainer.style.display = 'none'; // Başlangıçta gizli
+
+const chatMessages = document.createElement('div');
+chatMessages.style.height = '200px';
+chatMessages.style.overflowY = 'auto';
+chatMessages.style.marginBottom = '10px';
+
+const chatInput = document.createElement('input');
+chatInput.type = 'text';
+chatInput.placeholder = 'Mesajınızı yazın...';
+chatInput.style.width = '100%';
+chatInput.style.padding = '5px';
+
+const chatButton = document.createElement('button');
+chatButton.innerText = 'Gönder';
+chatButton.style.width = '100%';
+chatButton.style.padding = '5px';
+chatButton.style.marginTop = '10px';
+
+chatContainer.appendChild(chatMessages);
+chatContainer.appendChild(chatInput);
+chatContainer.appendChild(chatButton);
+document.body.appendChild(chatContainer);
+
+// Chat butonu
+const toggleChatButton = document.createElement('button');
+toggleChatButton.innerText = 'Chat';
+toggleChatButton.style.position = 'fixed';
+toggleChatButton.style.top = '20px';
+toggleChatButton.style.right = '20px';
+toggleChatButton.style.padding = '10px';
+toggleChatButton.style.fontSize = '16px';
+
+toggleChatButton.addEventListener('click', () => {
+    chatContainer.style.display = chatContainer.style.display === 'none' ? 'block' : 'none';
+});
+
+document.body.appendChild(toggleChatButton);
+
+// Mesaj gönderme
+chatButton.addEventListener('click', () => {
+    const message = chatInput.value.trim();
+    if (message) {
+        socket.send(JSON.stringify({ type: 'chat', data: message }));
+        chatInput.value = '';
+    }
+});
+
+// WebSocket mesajlarını işleme
 socket.onmessage = (event) => {
-    players = JSON.parse(event.data); // Sunucudan gelen oyuncu bilgilerini al
+    const message = JSON.parse(event.data);
+
+    if (message.type === 'player') {
+        players = message.data; // Oyuncu bilgilerini güncelle
+    } else if (message.type === 'chat') {
+        // Chat mesajını ekrana ekle
+        const messageElement = document.createElement('div');
+        messageElement.innerText = message.data;
+        chatMessages.appendChild(messageElement);
+        chatMessages.scrollTop = chatMessages.scrollHeight; // En son mesaja kaydır
+    }
 };
 
 const drawGrid = () => {
