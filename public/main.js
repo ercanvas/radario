@@ -190,6 +190,32 @@ chatButton.addEventListener('click', () => {
     }
 });
 
+// Ses dosyaları
+const notificationSound = new Audio('notification.mp3'); // Yeni mesaj sesi
+const joinSound = new Audio('join.mp3'); // Oyuncu giriş sesi
+const leaveSound = new Audio('leave.mp3'); // Oyuncu çıkış sesi
+
+// Bildirimler için div
+const notificationContainer = document.createElement('div');
+notificationContainer.style.position = 'fixed';
+notificationContainer.style.top = '20px';
+notificationContainer.style.left = '20px';
+notificationContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+notificationContainer.style.color = 'white';
+notificationContainer.style.padding = '10px';
+notificationContainer.style.borderRadius = '10px';
+notificationContainer.style.display = 'none';
+document.body.appendChild(notificationContainer);
+
+// Bildirim göster
+function showNotification(message) {
+    notificationContainer.innerText = message;
+    notificationContainer.style.display = 'block';
+    setTimeout(() => {
+        notificationContainer.style.display = 'none';
+    }, 3000); // 3 saniye sonra bildirimi gizle
+}
+
 // WebSocket mesajlarını işleme
 socket.onmessage = (event) => {
     const message = JSON.parse(event.data);
@@ -202,6 +228,18 @@ socket.onmessage = (event) => {
         messageElement.innerText = message.data;
         chatMessages.appendChild(messageElement);
         chatMessages.scrollTop = chatMessages.scrollHeight; // En son mesaja kaydır
+
+        // Yeni mesaj bildirimi ve ses
+        showNotification('Yeni mesaj!');
+        notificationSound.play();
+    } else if (message.type === 'join') {
+        // Oyuncu giriş bildirimi ve ses
+        showNotification(`${message.data} oyuna katıldı!`);
+        joinSound.play();
+    } else if (message.type === 'leave') {
+        // Oyuncu çıkış bildirimi ve ses
+        showNotification(`${message.data} oyundan ayrıldı!`);
+        leaveSound.play();
     }
 };
 

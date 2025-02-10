@@ -25,6 +25,13 @@ wss.on('connection', (ws) => {
     // Oyuncu formu gönderilene kadar beklet
     pendingPlayers[playerId] = ws;
 
+    // Oyuncu giriş bildirimi gönder
+    wss.clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify({ type: 'join', data: `Oyuncu ${playerId}` }));
+        }
+    });
+
     // Oyuncudan gelen mesajları dinliyoruz
     ws.on('message', (message) => {
         const data = JSON.parse(message);
@@ -60,6 +67,13 @@ wss.on('connection', (ws) => {
         delete players[playerId];
         delete pendingPlayers[playerId];
         console.log(`Player disconnected: ${playerId}`);
+
+        // Oyuncu çıkış bildirimi gönder
+        wss.clients.forEach(client => {
+            if (client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({ type: 'leave', data: `Oyuncu ${playerId}` }));
+            }
+        });
 
         // Tüm oyunculara güncellenmiş listeyi gönder
         wss.clients.forEach(client => {
