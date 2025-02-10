@@ -1,6 +1,6 @@
 const radar = document.createElement('canvas');
 const rtx = radar.getContext('2d');
-const socket = new WebSocket('ws://localhost:3000'); // WebSocket bağlantısı
+const socket = new WebSocket('wss://radario.onrender.com'); // WebSocket bağlantısı
 
 radar.width = window.innerWidth;
 radar.height = window.innerHeight;
